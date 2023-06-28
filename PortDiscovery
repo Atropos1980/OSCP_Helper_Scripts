@@ -1,0 +1,170 @@
+#!/bin/bash
+
+## ANSI escape codes for colorized output
+red='\033[0;31m'
+green='\033[0;32m'
+yellow='\033[0;33m'
+blue='\033[0;34m'
+reset='\033[0m'
+
+## Check if host and file name were specified as inputs to the script and/or prompt user to provide them
+while true; do
+    if [ $# -eq 2 ]; then
+        targetAddress="$1"
+        scanFile="$2"
+        break
+    else
+        echo
+        read -p "$(echo -e ${blue}Enter Host:${reset}) " targetAddress
+        echo
+        read -p "$(echo -e ${blue}Enter file name to write scan data:${reset}) " scanFile
+
+        # Check if user failed to enter anything
+        if [ -z "$targetAddress" ] || [ -z "$scanFile" ]; then
+            echo -e "\n${red}Error:${reset}${yellow} A target IP address and a file to store scan results must be provided.${reset}"
+            echo -e "\n${green}Here's an example:${reset}"
+            echo -e "\n${yellow}[+] PortDiscovery.sh IP FILE${reset}"
+        else
+            set -- "$targetAddress" "$scanFile"
+            break
+        fi
+    fi
+done
+
+# Function Flag
+# Set function flag to test if function has been run before running the next dependent function
+flag=0
+
+### Functions ###
+
+# Host Check function
+# Check to see if host is up
+function host_check() {
+    # Host discovery scan
+    /usr/bin/nmap -sn "$1" -vv | tee -a "$2"
+}
+
+# Port discovery function
+# Runs an nmap port scan to identify open ports on the $targetAddress variable and writes the output to $scanFile
+function port_discovery() {
+    # Port discovery scan
+    /usr/bin/nmap -Pn "$1" -p- -T4 -vv | tee -a "$2"
+    flag=1
+}
+
+# Discovered ports function
+# Parses the specified $scanFile for discovered ports and saves them to the $portNumbers array
+function discovered_ports() {
+    # Test if port_discovery function has been run
+    if [ "$flag" -eq 1 ]; then
+        # Pull port numbers out of specified file and save them to portNumbers variable
+        portNumbers=$(grep -oE "[0-9]{1,5}/[a-z]+" "$scanFile" | grep -oE "[0-9]{1,5}" | sort -u | tr '\n' ',' | sed 's/.$//')
+        # Print open ports to the terminal and write them to specified file using green color and reset color to default afterwards
+        echo -e "\nThe following ports are currently open on the host: ${green}${portNumbers}${reset}" | tee -a "$scanFile"
+    else
+        # Print error message to inform user that port discovery must be run first
+        echo -e "\n${red}Error${reset}: ${yellow}Port discovery has not been performed.${reset}"
+        exit 1
+    fi
+}
+
+## Service enumeration function
+# Based on ports found from the discovered_ports function stored in the $portNumbers array
+function service_enumeration() {
+    if [ "$flag" -eq 1 ]; then
+        # Run nmap service detection against discovered ports
+        # Change the stats value depending on how much you want printed to the terminal
+        /usr/bin/nmap -Pn "$1" -p "$2" -sV -vv --stats-every 15s | tee -a "$3"
+    else
+        # Print error message to inform user that port discovery has not been performed
+        echo -e "\n${red}Error${reset}: ${yellow}Port discovery has not been performed.${reset}"
+        exit 1
+    fi
+}
+
+## Default Script scan
+# Performs default NSE script scanning against $targetHost and $portNumbers
+function default_script_scan() {
+    if [ "$flag" -eq 1 ]; then
+        # Run nmap default script scan against discovered ports
+        # Change the stats value depending on how much you want printed to the terminal
+        /usr/bin/nmap -Pn "$1" -p "$2" -sC -vv --stats-every 15s | tee -a "$3"
+    else
+        # Print error message to inform user that port discovery has not been performed
+        echo -e "\n${red}Error${reset}: ${yellow}Port discovery has not been performed.${reset}"
+        exit 1
+    fi
+}
+
+## UDP Common Port scan
+# Performs UDP scan against common UDP ports
+function udp_common_port_scan() {
+    # Run nmap UDP scan against common UDP ports
+    ports="53,69,123,161,162,5353,1900,11211"
+    /usr/bin/nmap -Pn "$1" -sU -p "$ports" -vv | tee -a "$scanFile"
+}
+
+## Main Menu function
+# Provides a list of scan options for the user to select
+function main_menu() {
+    echo -e "${yellow}\nI'm here to help speed things along!\n${reset}"
+    echo -e "${blue}Please choose which scan you would like me to perform for you... ${reset}\n"
+    echo -e "${red}Note, Service Enumeration and Default Script scans require running the Port Discovery scan first.${reset}\n"
+    echo -e "${green}Select 1 to check if host is alive (-sn -vv)"
+    echo -e "Select 2 to run Port Discovery scan (-Pn -p- -T4 -vv)"
+    echo -e "Select 3 to run Service Enumeration scan (-Pn -sV -vv --stats-every 15s)"
+    echo -e "Select 4 to run Default Script scan (-Pn -sC -vv --stats-every 15s)"
+    echo -e "Select 5 to run Options 1-4 at once"
+    echo -e "Select 6 to run UDP Common Port scan (-sU)"
+    echo -e "Select 7 to exit${reset}\n"
+}
+
+# Loop until user selects option
+while true; do
+    # Print the options menu
+    main_menu
+
+    # Prompt the user for input
+    tput setaf 3
+    read -p "Enter your selection: " userSelection
+    tput sgr0
+    tput setaf 2
+    echo -e "\nYou have selected $userSelection\n"
+    tput sgr0
+
+    # Check user's selection
+    case "$userSelection" in
+        1)
+            host_check "$targetAddress" "$scanFile"
+            ;;
+        2)
+            port_discovery "$targetAddress" "$scanFile"
+            discovered_ports
+            ;;
+        3)
+            service_enumeration "$targetAddress" "$portNumbers" "$scanFile"
+            ;;
+        4)
+            default_script_scan "$targetAddress" "$portNumbers" "$scanFile"
+            ;;
+        5)
+            host_check "$targetAddress" "$scanFile"
+            port_discovery "$targetAddress" "$scanFile"
+            discovered_ports
+            service_enumeration "$targetAddress" "$portNumbers" "$scanFile"
+            default_script_scan "$targetAddress" "$portNumbers" "$scanFile"
+            ;;
+        6)
+            udp_common_port_scan "$scanFile"
+            ;;
+        7)
+            echo -e "${yellow}Happy hunting!!${reset}"
+            exit
+            ;;
+        *)
+            # Print error message and loop
+            echo -e "${red}Invalid selection!${reset}\n ${yellow}Please enter a valid option.${reset}"
+            ;;
+    esac
+done
+

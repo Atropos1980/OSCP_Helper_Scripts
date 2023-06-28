@@ -1,0 +1,64 @@
+#!/bin/bash
+
+update_zshrc_file() {
+    local zshrc_file="$HOME/.zshrc"
+    local target_ip="$1"
+
+    if grep -q "^export target=" "$zshrc_file"; then
+        # Update existing export line
+        sed -i "s|^export target=.*$|export target=$target_ip|" "$zshrc_file"
+    else
+        # Append export line if it doesn't exist
+        echo "export target=$target_ip" >> "$zshrc_file"
+    fi
+}
+
+# ANSI escape codes for colorized output
+GREEN="\033[1;32m"
+YELLOW="\033[1;33m"
+BLUE="\033[1;34m"
+CYAN="\033[1;36m"
+RED="\033[1;31m"
+RESET="\033[0m"
+
+# Provide user warning about running this script
+echo -e "\n${RED}!!! Danger Will Robinson, Danger !!! ${RESET}"
+echo -e "\n${YELLOW}This script will change any entries within the"
+echo -e "host file that match the input you are about to provide."
+echo -e "Make sure you know what you are doing and have a backup"
+echo -e "of your default host file settings before proceeding."
+echo -e "You have been warned....${RESET}"
+
+echo -e "\n${CYAN}Do you wish to proceed? [Y/n]: ${RESET}"
+read choice
+
+if [[ $choice =~ ^[Nn] ]]; then
+    echo -e "${CYAN}I'm outta here!${RESET}"
+    exit 0
+else
+    echo -e "${GREEN}Continuing...${RESET}\n"
+fi
+
+# Get user input for the IP and the desired hostname
+read -p "$(echo -e ${BLUE}Enter the target IP address: ${RESET})" ip
+read -p "$(echo -e ${BLUE}Enter the hostname for the target: ${RESET})" hostname
+
+# Remove any existing lines with the same IP or hostname
+sudo sed -i "/\b$ip\b/d" /etc/hosts
+sudo sed -i "/\b$hostname\b/d" /etc/hosts
+
+# Add the IP to the panel script so that it is displayed
+echo "$ip" > /tmp/target_ip.txt
+
+# Add the IP and the hostname to the /etc/hosts file
+echo "$ip $hostname" | sudo tee -a /etc/hosts >/dev/null
+
+# Call the function to update the zshrc file
+update_zshrc_file "$ip"
+
+# Inform the user of the changes and the affected locations
+echo -e "\n${GREEN}The target's IP address has been set to${RESET} ${CYAN}$ip${RESET}"
+echo -e "\n${GREEN}Host${RESET} ${YELLOW}$hostname${RESET} ${GREEN}added to /etc/hosts with IP address ${RESET}${CYAN}$ip${RESET}"
+echo -e "\n${RED}Don't forget to run ${RESET}${YELLOW}'source ~\.zshrc'${RESET}${RED} to use the${RESET} ${BLUE}\$target${RESET}${RED} variable in your commands. ${RESET}"
+echo -e "\n${BLUE}[+]Example: ${RESET}${YELLOW}ping \$target${RESET}"
+echo -e "\n${BLUE}If you want the target's IP address in your top panel, use the\n${RESET}${YELLOW}Generic Monitor ${RESET}${BLUE}and set the command to ${RESET}${YELLOW}'cat /tmp/target_ip.txt'\nand ${RESET}${BLUE}set the${RESET}${YELLOW} Period(s) = 5.00${RESET}"
