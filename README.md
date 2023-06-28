@@ -16,13 +16,17 @@ Select 7 to exit
 
 Please note that Option 2 - Port Discovery Scan, must be ran prior to selecting options 3 and 4, since it uses the discovered ports in option 2 to specifically target those ports and services in options 3 and 4. 
 
+Option 6 only scans the most common UDP ports, you may need to dig a bit deeper depending on the malevolence of the box creator.....
+
+**Note**: These are only the initial scans. You will need to individually target services found using the `nmap scripting engine` to enumerate more about each service. Also, don't blindly run this script or any other script without first looking at it and verifying their content. Also, always test in a VM with a backup copy so if anything ever goes awry, you can just revert.   
+
 ### set_it_all
 
-The `set_it_all` script provides the user with the ability to set the ip_address and hostname of the target machine in the /etc/hosts file. 
+The `set_it_all` script provides the user with the ability to set the `ip_address` and `hostname` of the target machine in the `/etc/hosts` file. 
 
-It also creates a `/tmp/target_ip.txt` file with the targets ip address. This is used to point to a Generic Monitor - Top Panel widget, which you will need to create. 
+It also creates a `/tmp/target_ip.txt` file with the targets ip address. This is used to point to a Generic Monitor - Top Panel widget, which you will need to create.
 
-It then reads the /tmp/target_ip.txt file every 5 seconds (or whatever period you set it for) using 'Command `cat /tmp/target_ip.txt`'  to display the targets IP address in the top panel. 
+It then reads the `/tmp/target_ip.txt` file every `5 seconds` (or whatever period you set it for) using `'Command 'cat /tmp/target_ip.txt'`  to display the targets IP address in the top panel. 
 
 It also writes an entry into your `~/.zshrc` file that is the targets IP address. 
 Run `source ~/.` to export the IP to the `$target` variable.
