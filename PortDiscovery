@@ -155,7 +155,7 @@ while true; do
             default_script_scan "$targetAddress" "$portNumbers" "$scanFile"
             ;;
         6)
-            udp_common_port_scan "$scanFile"
+            udp_common_port_scan "$targetAddress" "$ports" "$scanFile"
             ;;
         7)
             echo -e "${yellow}Happy hunting!!${reset}"
