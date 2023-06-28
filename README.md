@@ -1,6 +1,8 @@
 ## These scripts have been developed to help with getting your environment setup quickly and to help automate some of the initial scanning tasks that need to be performed.
 
-The PortDiscovery script takes arguments for an IP/hostname, then creates and writes to a user specified file that the scans will be written to, appending each subsequent scan to the file. It will then provide a list of options to scan the target machine. 
+###PortDiscovery
+
+The `PortDiscovery` script takes arguments for an IP/hostname, then creates and writes to a user specified file that the scans will be written to, appending each subsequent scan to the file. It will then provide a list of options to scan the target machine. 
 
 ```
 Select 1 to check if host is alive (-sn -vv)
@@ -14,7 +16,9 @@ Select 7 to exit
 
 Please note that Option 2 - Port Discovery Scan, must be ran prior to selecting options 3 and 4, since it uses the discovered ports in option 2 to specifically target those ports and services in options 3 and 4. 
 
-The set_it_all script provides the user with the ability to set the ip_address and hostname of the target machine in the /etc/hosts file. 
+###set_it_all
+
+The `set_it_all` script provides the user with the ability to set the ip_address and hostname of the target machine in the /etc/hosts file. 
 
 It also creates a `/tmp/target_ip.txt` file with the targets ip address. This is used to point to a Generic Monitor - Top Panel widget, which you will need to create. 
 
